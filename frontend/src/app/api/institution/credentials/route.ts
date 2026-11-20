@@ -87,13 +87,18 @@ export async function GET(request: NextRequest) {
         if (dateFrom) query = query.gte('issued_at', dateFrom);
         if (dateTo)   query = query.lte('issued_at', dateTo + 'T23:59:59Z');
         if (search.trim()) {
-            const term = search.trim();
-            query = query.or(
-                `token_id.ilike.%${term}%,` +
-                `metadata->credentialData->>studentName.ilike.%${term}%,` +
-                `metadata->credentialData->>degree.ilike.%${term}%,` +
-                `metadata->credentialData->>credentialType.ilike.%${term}%`
-            );
+            // Escape PostgREST's `or` delimiters so a search term can never
+            // break out of the filter expression it is embedded in. Mirrors the
+            // sanitization already applied by the institution students route.
+            const safe = search.replace(/[,()\\]/g, ' ').trim();
+            if (safe) {
+                query = query.or(
+                    `token_id.ilike.%${safe}%,` +
+                    `metadata->credentialData->>studentName.ilike.%${safe}%,` +
+                    `metadata->credentialData->>degree.ilike.%${safe}%,` +
+                    `metadata->credentialData->>credentialType.ilike.%${safe}%`
+                );
+            }
         }
 
         const { data, error, count } = await query;
