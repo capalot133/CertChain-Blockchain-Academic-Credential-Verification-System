@@ -274,7 +274,7 @@ export function getServiceRoleClient() {
 export function requireObservabilityIngestRequest(
     request: NextRequest,
 ): { ok: true } | { ok: false; status: number; error: string } {
-    const expected = process.env.OBSERVABILITY_INGEST_SECRET;
+    const expected = process.env.OBSERVABILITY_INGEST_SECRET?.trim();
     if (!expected) {
         return {
             ok: false,

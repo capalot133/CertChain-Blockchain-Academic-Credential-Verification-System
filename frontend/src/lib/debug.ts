@@ -90,7 +90,7 @@ function getObservabilityIngestUrl(): string | undefined {
 }
 
 /**
- * Returns a shared-secret header value when configured. The secret is server-only.
+ * Returns the shared secret sent to the ingest endpoint. Server-only.
  */
 function getObservabilityIngestSecret(): string | undefined {
     return process.env.OBSERVABILITY_INGEST_SECRET;
@@ -100,18 +100,28 @@ function getObservabilityIngestSecret(): string | undefined {
  * Delivers an observability event. Returns a promise that resolves once the
  * request has completed (or failed), so serverless callers can await it before
  * the function freezes. Failures are logged, never thrown.
+ *
+ * Authentication uses the `x-observability-secret` header, matching
+ * `requireObservabilityIngestRequest` on the receiving side. Without a
+ * configured secret no event is sent, so unauthenticated forged metrics
+ * cannot be injected.
  */
 export async function sendObservabilityEvent(payload: Record<string, unknown>): Promise<void> {
     const ingestUrl = getObservabilityIngestUrl();
     if (!ingestUrl) return;
 
+    const secret = getObservabilityIngestSecret();
+    if (!secret) {
+        console.error('Observability ingest secret not configured; event not sent.');
+        return;
+    }
+
     try {
         const body = JSON.stringify(scrubSensitiveData(payload));
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        const secret = getObservabilityIngestSecret();
-        if (secret) {
-            headers['Authorization'] = `Bearer ${secret}`;
-        }
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'x-observability-secret': secret,
+        };
 
         const response = await fetch(ingestUrl, {
             method: 'POST',
