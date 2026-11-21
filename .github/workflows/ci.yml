@@ -151,8 +151,6 @@ jobs:
     needs: build
     if: github.event_name == 'push' && vars.PREVIEW_URL != ''
     runs-on: ubuntu-latest
-    env:
-      BASE_URL: ${{ vars.PREVIEW_URL }}
     defaults:
       run:
         working-directory: ./frontend
@@ -162,9 +160,13 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Verify Security Headers
+        env:
+          BASE_URL: ${{ vars.PREVIEW_URL }}
         run: bash scripts/check-security-headers.sh
 
       - name: Verify CSP Nonce Rotation
+        env:
+          BASE_URL: ${{ vars.PREVIEW_URL }}
         run: |
           nonce_of() {
             curl -sI "$1" | tr -d '\r' | grep -i '^content-security-policy' | grep -o "'nonce-[^']*'" | head -n1

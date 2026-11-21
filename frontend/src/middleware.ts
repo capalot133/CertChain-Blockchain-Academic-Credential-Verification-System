@@ -29,6 +29,9 @@ export function middleware(request: NextRequest) {
     response.headers.set('x-request-id', requestId);
     response.headers.set('x-nonce', nonce);
     response.headers.set('Content-Security-Policy', csp);
+    // Expose the nonce on the response so the post-deploy check can assert
+    // per-response nonce rotation without parsing the CSP header.
+    response.headers.set('x-nonce', nonce);
     return response;
 }
 
